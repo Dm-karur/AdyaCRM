@@ -7,7 +7,8 @@ const {
   updateEntryStatus,
   deleteEntry,
   updateEntryPhoto,
-  uploadEntryBill
+  uploadEntryBill,
+  addPurchaseBill
 } = require('../controllers/customerEntryController');
 const { protect, admin } = require('../middleware/auth');
 
@@ -20,8 +21,9 @@ router.route('/')
 router.get('/all', protect, admin, getAllEntries);
 
 router.put('/:id/status', protect, updateEntryStatus);
-router.put('/:id/photo', protect, upload.single('photo'), updateEntryPhoto);
-router.put('/:id/bills', protect, upload.single('bill'), uploadEntryBill);
+router.post('/:id/photo', protect, upload.single('photo'), updateEntryPhoto);
+router.post('/:id/bills', protect, upload.single('bill'), uploadEntryBill);
+router.post('/:id/purchase-bills', protect, addPurchaseBill);
 router.delete('/:id', protect, deleteEntry);
 
 module.exports = router;

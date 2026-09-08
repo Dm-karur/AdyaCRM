@@ -14,7 +14,8 @@ const createFollowup = async (req, res) => {
     const followup = await Followup.create({
       leadId,
       date,
-      description
+      description,
+      createdBy: req.user._id
     });
 
     res.status(201).json(followup);
@@ -30,16 +31,29 @@ const createFollowup = async (req, res) => {
 const getAllFollowups = async (req, res) => {
   try {
     let matchQuery = {};
-    if (req.user.role !== 'Admin') {
+    if (req.user.role?.toLowerCase() !== 'admin') {
       const CustomerEntry = require('../models/CustomerEntry');
-      const leads = await CustomerEntry.find({ brand: req.user.brand }, '_id');
+      const leads = await CustomerEntry.find({ branch: req.user.branch }, '_id');
       const leadIds = leads.map(l => l._id);
       matchQuery.leadId = { $in: leadIds };
     }
 
-    const followups = await Followup.find(matchQuery)
-      .populate('leadId', 'name company email phone status source priority')
+    const followupsRaw = await Followup.find(matchQuery)
+      .populate({
+        path: 'leadId',
+        select: 'name company email phone status source priority employeeId',
+        populate: { path: 'employeeId', select: 'name' }
+      })
+      .populate('createdBy', 'name')
       .sort({ date: 1 }); // Sort by upcoming
+      
+    // Transform to include creatorName
+    const followups = followupsRaw.map(f => {
+      const obj = f.toObject();
+      obj.creatorName = obj.createdBy?.name || obj.leadId?.employeeId?.name || 'Unknown';
+      return obj;
+    });
+
     res.json(followups);
   } catch (error) {
     console.error('GET ALL FOLLOWUPS ERROR:', error);
@@ -52,8 +66,22 @@ const getAllFollowups = async (req, res) => {
 // @access  Private
 const getFollowupsByLead = async (req, res) => {
   try {
-    const followups = await Followup.find({ leadId: req.params.leadId })
+    const followupsRaw = await Followup.find({ leadId: req.params.leadId })
+      .populate({
+        path: 'leadId',
+        select: 'name company email phone status source priority employeeId',
+        populate: { path: 'employeeId', select: 'name' }
+      })
+      .populate('createdBy', 'name')
       .sort({ date: 1 });
+      
+    // Transform to include creatorName
+    const followups = followupsRaw.map(f => {
+      const obj = f.toObject();
+      obj.creatorName = obj.createdBy?.name || obj.leadId?.employeeId?.name || 'Unknown';
+      return obj;
+    });
+
     res.json(followups);
   } catch (error) {
     console.error('GET LEAD FOLLOWUPS ERROR:', error);

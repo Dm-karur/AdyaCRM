@@ -18,6 +18,11 @@ const followupSchema = new mongoose.Schema({
     type: String,
     enum: ['PENDING', 'DONE'],
     default: 'PENDING'
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
   }
 }, {
   timestamps: true

@@ -12,11 +12,11 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-3 md:py-2 rounded-xl hover:bg-accent transition-all duration-300 shadow-soft font-medium min-h-[44px] flex items-center justify-center;
+    @apply bg-primary text-white px-5 py-2 rounded-xl hover:bg-accent transition-all duration-300 shadow-soft font-medium min-h-[38px] flex items-center justify-center text-sm;
   }
   
   .btn-secondary {
-    @apply bg-white text-primary border border-gray-200 px-6 py-3 md:py-2 rounded-xl hover:bg-gray-50 transition-all duration-300 shadow-sm font-medium min-h-[44px] flex items-center justify-center;
+    @apply bg-white text-primary border border-gray-200 px-5 py-2 rounded-xl hover:bg-gray-50 transition-all duration-300 shadow-sm font-medium min-h-[38px] flex items-center justify-center text-sm;
   }
 
   .card {

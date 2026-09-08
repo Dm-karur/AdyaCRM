@@ -23,7 +23,8 @@ const userSchema = new mongoose.Schema({
   salaryType: { type: String, enum: ['Weekly', 'Monthly'], default: 'Monthly' },
   shiftStart: { type: String, default: "09:00" },
   shiftEnd: { type: String, default: "18:00" },
-  brand: { type: String, enum: ['Bosch', 'Furniture', 'None'], default: 'None' }
+  brand: { type: String, enum: ['Bosch', 'Furniture', 'None'], default: 'None' },
+  branch: { type: String, default: 'Main' }
 }, {
   timestamps: true
 });

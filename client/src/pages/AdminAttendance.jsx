@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const AdminAttendance = () => {
   const [employees, setEmployees] = useState([]);
@@ -78,7 +79,7 @@ const AdminAttendance = () => {
           date: manageRecordData.date,
           reason: manageRecordData.reason
         });
-        alert('Leave marked successfully for this employee');
+        toast.success('Leave marked successfully for this employee');
       } else {
         await api.post('/admin/attendance/manual', {
           employeeId: manageRecordEmployeeId,
@@ -86,7 +87,7 @@ const AdminAttendance = () => {
           status: manageRecordAction, // 'Present' or 'Half Day'
           reason: manageRecordData.reason
         });
-        alert(`${manageRecordAction} attendance added successfully`);
+        toast.success(`${manageRecordAction} attendance added successfully`);
       }
       setIsManageRecordModalOpen(false);
       setManageRecordData({ date: '', reason: '' });
@@ -95,7 +96,7 @@ const AdminAttendance = () => {
         setSelectedEmployeeId('');
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to submit record');
+      toast.error(err.response?.data?.message || 'Failed to submit record');
     } finally {
       setIsSubmittingRecord(false);
     }
@@ -248,20 +249,20 @@ const AdminAttendance = () => {
 
   const getPhotoUrl = (photo) => {
     if (!photo) return null;
-    return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+    return photo;
   };
 
   return (
-    <div className="max-w-7xl mx-auto h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6 shrink-0">
-        <h1 className="text-2xl font-bold text-primary">
+    <div className="max-w-7xl mx-auto h-full flex flex-col px-4 md:px-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 shrink-0 mt-4 md:mt-0">
+        <h1 className="text-lg md:text-2xl font-bold text-primary">
           {selectedEmployeeId ? 'Employee Attendance History' : 'Select Employee to View Attendance'}
         </h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
           {selectedEmployeeId ? (
             <>
-              <input type="month" className="input-field text-sm py-1.5" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-              <button onClick={() => setSelectedEmployeeId('')} className="text-gray-500 hover:text-primary font-medium">
+              <input type="month" className="input-field text-sm py-1.5 flex-1 sm:flex-none" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+              <button onClick={() => setSelectedEmployeeId('')} className="text-gray-500 hover:text-primary font-medium text-sm md:text-base whitespace-nowrap">
                 &larr; Back to Directory
               </button>
             </>
@@ -270,8 +271,8 @@ const AdminAttendance = () => {
       </div>
 
       {!selectedEmployeeId ? (
-        <div className="card w-full flex flex-col shadow-sm border-0 flex-1">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col flex-1 overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+          <div className="flex flex-col md:flex-row gap-4 p-5 md:p-6 border-b border-gray-100 bg-gray-50/30">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3.5 text-gray-400" size={16} />
               <input
@@ -298,7 +299,7 @@ const AdminAttendance = () => {
             <table className="w-full min-w-[800px] text-left">
               <thead>
                 <tr className="border-b-2 text-sm text-gray-400 font-bold uppercase tracking-wider">
-                  <th className="pb-3 pr-4">Employee</th>
+                  <th className="pb-3 pl-6 pr-4">Employee</th>
                   <th className="pb-3 pr-4 text-center">Dept</th>
                   <th className="pb-3 pr-4 text-center">Salary</th>
                   <th className="pb-3 pr-4 text-center">Status</th>
@@ -308,12 +309,14 @@ const AdminAttendance = () => {
               <tbody>
                 {filteredEmployees.map(emp => (
                   <tr key={emp._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                    <td className="py-4 pr-4 font-bold text-gray-700 flex flex-col">
-                      <span className="flex items-center gap-2">
-                        {emp.name} 
-                        {emp.role === 'Admin' && <span className="w-2.5 h-2.5 rounded-full bg-green-500" title="Admin"></span>}
-                      </span>
-                      <span className="text-xs text-gray-500 font-medium">{emp.employeeId}</span>
+                    <td className="py-4 pl-6 pr-4">
+                      <div className="flex flex-col font-bold text-gray-700">
+                        <span className="flex items-center gap-2">
+                          {emp.name} 
+                          {emp.role === 'Admin' && <span className="w-2.5 h-2.5 rounded-full bg-green-500" title="Admin"></span>}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">{emp.employeeId}</span>
+                      </div>
                     </td>
                     <td className="py-4 pr-4 text-center text-sm font-medium text-gray-600">{emp.department || 'General'}</td>
                     <td className="py-4 pr-4 text-center">
@@ -350,10 +353,9 @@ const AdminAttendance = () => {
               </tbody>
             </table>
             </div>
-            {/* Mobile Card View for Employees */}
-            <div className="md:hidden flex flex-col gap-4 p-4">
+            <div className="md:hidden flex flex-col gap-4 p-4 bg-gray-50/50">
               {filteredEmployees.map(emp => (
-                <div key={emp._id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-4">
+                <div key={emp._id} className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] p-5 flex flex-col gap-4 transition-all hover:shadow-[0_4px_20px_rgb(0,0,0,0.06)] hover:border-blue-100">
                   <div className="flex justify-between items-start">
                     <div className="flex flex-col">
                       <span className="flex items-center gap-2 font-bold text-gray-800 text-lg">
@@ -362,14 +364,14 @@ const AdminAttendance = () => {
                       </span>
                       <span className="text-xs text-gray-500 font-medium">{emp.employeeId}</span>
                     </div>
-                    <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded">{emp.department || 'General'}</span>
+                    <span className="text-[10px] font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-md tracking-wider uppercase">{emp.department || 'General'}</span>
                   </div>
                   
-                  <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-between">
-                    <span className="text-sm text-gray-600 font-medium">Salary</span>
+                  <div className="bg-gray-50/80 p-4 rounded-xl flex items-center justify-between border border-gray-100/50">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Salary Details</span>
                     <div className="flex flex-col items-end">
                       <span className="font-bold text-gray-800">₹{emp.salary || 0}/hr</span>
-                      <span className={`px-2 py-0.5 mt-1 rounded text-[10px] uppercase font-bold ${emp.salaryType === 'Weekly' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                      <span className={`px-2 py-0.5 mt-1 rounded border text-[9px] uppercase font-bold ${emp.salaryType === 'Weekly' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                         {emp.salaryType || 'Monthly'}
                       </span>
                     </div>
@@ -434,7 +436,7 @@ const AdminAttendance = () => {
                   <thead>
                     <tr className="border-b-2 text-sm text-gray-400 font-bold uppercase tracking-wider">
                       <th className="pb-3 pr-4">Date</th>
-                      <th className="pb-3 pr-4 text-center">Punch Image</th>
+                      <th className="pb-3 pr-4 text-center">Images (In/Out)</th>
                       <th className="pb-3 pr-4">Punch In</th>
                       <th className="pb-3 pr-4">Punch Out</th>
                       <th className="pb-3 pr-4 text-center">Status</th>
@@ -450,17 +452,33 @@ const AdminAttendance = () => {
                         <tr key={record._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                           <td className="py-4 pr-4 font-bold text-gray-700">{new Date(record.date).toLocaleDateString()}</td>
                           <td className="py-4 pr-4 text-center">
-                            {displayPhoto ? (
-                              <img
-                                src={getPhotoUrl(displayPhoto)}
-                                alt="Punch"
-                                onClick={() => setPreviewImage(getPhotoUrl(displayPhoto))}
-                                className="w-14 h-14 mx-auto rounded-xl object-cover border-2 border-white shadow-soft cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                title="Click to view full attendance proof"
-                              />
-                            ) : (
-                              <span className="text-gray-300 text-xs font-medium bg-gray-100 px-2 py-1 rounded">No Photo</span>
-                            )}
+                            <div className="flex items-center justify-center gap-2">
+                              {displayPhoto ? (
+                                <img
+                                  src={getPhotoUrl(displayPhoto)}
+                                  alt="Punch In"
+                                  onClick={() => setPreviewImage(getPhotoUrl(displayPhoto))}
+                                  className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-soft cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                  title="Punch In: Click to view full proof"
+                                />
+                              ) : (
+                                <span className="text-gray-300 text-[10px] font-medium bg-gray-100 px-1 py-0.5 rounded">No IN Photo</span>
+                              )}
+                              
+                              {record.punchOut?.time && (
+                                (record.punchOut?.attendanceImage || record.punchOut?.photo) ? (
+                                  <img
+                                    src={getPhotoUrl(record.punchOut.attendanceImage || record.punchOut.photo)}
+                                    alt="Punch Out"
+                                    onClick={() => setPreviewImage(getPhotoUrl(record.punchOut.attendanceImage || record.punchOut.photo))}
+                                    className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-soft cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                    title="Punch Out: Click to view full proof"
+                                  />
+                                ) : (
+                                  <span className="text-gray-300 text-[10px] font-medium bg-gray-100 px-1 py-0.5 rounded">No OUT Photo</span>
+                                )
+                              )}
+                            </div>
                           </td>
                           <td className="py-4 pr-4 text-sm font-medium text-gray-600">
                             {record.punchIn?.time ? new Date(record.punchIn.time).toLocaleTimeString() : '--:--'}
@@ -474,23 +492,53 @@ const AdminAttendance = () => {
                             </span>
                           </td>
                           <td className="py-4 pr-4">
-                            {record.punchIn?.location?.latitude ? (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-xs text-gray-500 max-w-[200px] truncate" title={record.punchIn.location.address}>
-                                  {record.punchIn.location.address || 'Address Not Available'}
-                                </span>
-                                <a
-                                  href={`https://www.google.com/maps?q=${record.punchIn.location.latitude},${record.punchIn.location.longitude}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-primary hover:text-accent font-bold text-xs"
-                                >
-                                  <MapPin size={12} /> Open in Maps
-                                </a>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-300 font-medium">No GPS</span>
-                            )}
+                            <div className="flex flex-col gap-3">
+                              {record.punchIn?.location?.latitude ? (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">IN Location</span>
+                                  <span className="text-xs text-gray-500 max-w-[200px] truncate" title={record.punchIn.location.address}>
+                                    {record.punchIn.location.address || 'Address Not Available'}
+                                  </span>
+                                  <a
+                                    href={`https://www.google.com/maps?q=${record.punchIn.location.latitude},${record.punchIn.location.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-primary hover:text-accent font-bold text-xs"
+                                  >
+                                    <MapPin size={12} /> Open in Maps
+                                  </a>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">IN Location</span>
+                                  <span className="text-sm text-gray-300 font-medium">No GPS</span>
+                                </div>
+                              )}
+
+                              {record.punchOut?.time && (
+                                record.punchOut?.location?.latitude ? (
+                                  <div className="flex flex-col gap-1 border-t border-gray-100 pt-1">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OUT Location</span>
+                                    <span className="text-xs text-gray-500 max-w-[200px] truncate" title={record.punchOut.location.address}>
+                                      {record.punchOut.location.address || 'Address Not Available'}
+                                    </span>
+                                    <a
+                                      href={`https://www.google.com/maps?q=${record.punchOut.location.latitude},${record.punchOut.location.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-primary hover:text-accent font-bold text-xs"
+                                    >
+                                      <MapPin size={12} /> Open in Maps
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-1 border-t border-gray-100 pt-1">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OUT Location</span>
+                                    <span className="text-sm text-gray-300 font-medium">No GPS</span>
+                                  </div>
+                                )
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -513,18 +561,38 @@ const AdminAttendance = () => {
                         </div>
 
                         <div className="flex flex-col items-center gap-4 bg-gray-50 rounded-xl p-4">
-                          <div className="flex flex-col items-center gap-2">
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Punch Image</span>
-                            {displayPhoto ? (
-                              <img
-                                src={getPhotoUrl(displayPhoto)}
-                                alt="Punch"
-                                onClick={() => setPreviewImage(getPhotoUrl(displayPhoto))}
-                                className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-soft cursor-pointer"
-                              />
-                            ) : (
-                              <div className="w-24 h-24 rounded-2xl bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-400 border-4 border-white shadow-sm">
-                                No Photo
+                          <div className="flex justify-center gap-6 w-full">
+                            <div className="flex flex-col items-center gap-2">
+                              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">IN Image</span>
+                              {displayPhoto ? (
+                                <img
+                                  src={getPhotoUrl(displayPhoto)}
+                                  alt="Punch In"
+                                  onClick={() => setPreviewImage(getPhotoUrl(displayPhoto))}
+                                  className="w-16 h-16 rounded-2xl object-cover border-4 border-white shadow-soft cursor-pointer"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-2xl bg-gray-200 flex items-center justify-center text-[10px] font-medium text-gray-400 border-4 border-white shadow-sm text-center">
+                                  No Photo
+                                </div>
+                              )}
+                            </div>
+                            
+                            {record.punchOut?.time && (
+                              <div className="flex flex-col items-center gap-2">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">OUT Image</span>
+                                {(record.punchOut?.attendanceImage || record.punchOut?.photo) ? (
+                                  <img
+                                    src={getPhotoUrl(record.punchOut.attendanceImage || record.punchOut.photo)}
+                                    alt="Punch Out"
+                                    onClick={() => setPreviewImage(getPhotoUrl(record.punchOut.attendanceImage || record.punchOut.photo))}
+                                    className="w-16 h-16 rounded-2xl object-cover border-4 border-white shadow-soft cursor-pointer"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-2xl bg-gray-200 flex items-center justify-center text-[10px] font-medium text-gray-400 border-4 border-white shadow-sm text-center">
+                                    No Photo
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -545,9 +613,10 @@ const AdminAttendance = () => {
                           </div>
                         </div>
 
-                        {record.punchIn?.location?.latitude && (
-                          <div className="pt-2 border-t border-gray-100">
+                        <div className="pt-2 border-t border-gray-100 flex flex-col gap-4">
+                          {record.punchIn?.location?.latitude ? (
                             <div className="flex flex-col gap-2">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">IN Location</span>
                               <span className="text-xs text-gray-500 line-clamp-2 text-center">
                                 {record.punchIn.location.address || 'Address Not Available'}
                               </span>
@@ -560,8 +629,37 @@ const AdminAttendance = () => {
                                 <MapPin size={14} /> Open in Maps
                               </a>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">IN Location</span>
+                              <span className="text-xs text-gray-400 text-center">No GPS Available</span>
+                            </div>
+                          )}
+
+                          {record.punchOut?.time && (
+                            record.punchOut?.location?.latitude ? (
+                              <div className="flex flex-col gap-2 border-t border-gray-100 pt-2">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">OUT Location</span>
+                                <span className="text-xs text-gray-500 line-clamp-2 text-center">
+                                  {record.punchOut.location.address || 'Address Not Available'}
+                                </span>
+                                <a
+                                  href={`https://www.google.com/maps?q=${record.punchOut.location.latitude},${record.punchOut.location.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-center gap-1.5 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-bold text-xs transition-colors"
+                                >
+                                  <MapPin size={14} /> Open in Maps
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-2 border-t border-gray-100 pt-2">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">OUT Location</span>
+                                <span className="text-xs text-gray-400 text-center">No GPS Available</span>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -576,22 +674,22 @@ const AdminAttendance = () => {
       {/* Image Preview Modal (Professional Proof) */}
       {previewImage && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer backdrop-blur-sm"
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer backdrop-blur-sm"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-w-3xl w-full" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="fixed top-6 left-6 z-[60] bg-white/20 text-white rounded-full p-3 hover:bg-white/40 transition-colors backdrop-blur-md shadow-lg"
+          >
+            <X size={24} />
+          </button>
+          <div className="relative max-w-4xl w-full h-full max-h-[90vh] flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
             <img
               src={previewImage}
               alt="Attendance Proof"
-              className="w-full rounded-2xl shadow-2xl"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             />
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 bg-black/60 text-white rounded-full p-2.5 hover:bg-black transition-colors backdrop-blur-md"
-            >
-              <X size={20} />
-            </button>
-            <div className="absolute -bottom-8 left-0 right-0 text-center text-white/70 text-sm">
+            <div className="absolute -bottom-8 left-0 right-0 text-center text-white/70 text-sm font-medium">
               Permanent Attendance Record
             </div>
           </div>

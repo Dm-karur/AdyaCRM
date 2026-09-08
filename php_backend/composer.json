@@ -1,0 +1,14 @@
+{
+    "name": "gowth/attendance-system-php",
+    "description": "PHP Backend for Attendance System",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "firebase/php-jwt": "^6.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "api/"
+        }
+    }
+}

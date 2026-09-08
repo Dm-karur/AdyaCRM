@@ -30,7 +30,8 @@ const createQuote = async (req, res) => {
       model: quoteItems[0].model,
       mrp: quoteItems[0].mrp,
       discountedPrice: quoteItems[0].discountedPrice,
-      customerAddress
+      customerAddress,
+      createdBy: req.user._id
     });
 
     // Automatically generate a followup for this quote
@@ -41,10 +42,13 @@ const createQuote = async (req, res) => {
       leadId,
       date: new Date(),
       description: `Generated Quote for: ${productNames} - Total: ₹${totalDiscounted.toLocaleString()}`,
-      status: 'DONE'
+      status: 'DONE',
+      createdBy: req.user._id
     });
 
-    res.status(201).json(quote);
+    const populatedQuote = await Quote.findById(quote._id).populate('createdBy', 'name');
+
+    res.status(201).json(populatedQuote);
   } catch (error) {
     console.error('CREATE QUOTE ERROR:', error);
     res.status(500).json({ message: error.message });
@@ -57,6 +61,7 @@ const createQuote = async (req, res) => {
 const getQuotesByLead = async (req, res) => {
   try {
     const quotes = await Quote.find({ leadId: req.params.leadId })
+      .populate('createdBy', 'name')
       .sort({ date: -1 }); // Newest first
     res.json(quotes);
   } catch (error) {

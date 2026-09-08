@@ -5,7 +5,7 @@ const CustomerEntry = require('../models/CustomerEntry');
 // @access  Private
 const createEntry = async (req, res) => {
   try {
-    const { name, company, email, phone, status, source, priority, serviceInterest, budget } = req.body;
+    const { name, company, email, phone, status, source, referredBy, priority, serviceInterest, budget, area, pincode } = req.body;
     
     const existingEntryByPhone = await CustomerEntry.findOne({ phone });
     if (existingEntryByPhone) {
@@ -30,14 +30,19 @@ const createEntry = async (req, res) => {
       name,
       company: company || '-',
       email: email || '-',
+      area: area || '-',
       phone,
       status: status || 'NEW LEAD',
       source: source || 'WEBSITE',
+      referredBy: referredBy || '-',
       serviceInterest: serviceInterest || '-',
       budget: budget || '-',
       priority: priority || 'WARM',
+      area: area || '-',
+      pincode: pincode || '-',
       photo,
-      brand: req.user.brand || 'None'
+      brand: req.user.brand || 'None',
+      branch: req.user.branch || 'Main'
     });
 
     res.status(201).json(entry);
@@ -52,8 +57,8 @@ const createEntry = async (req, res) => {
 // @access  Private
 const getEmployeeEntries = async (req, res) => {
   try {
-    const entries = await CustomerEntry.find({ employeeId: req.user._id })
-      .populate('employeeId', 'name employeeId department brand')
+    const entries = await CustomerEntry.find({ branch: req.user.branch })
+      .populate('employeeId', 'name employeeId department brand branch')
       .sort({ createdAt: -1 });
     res.json(entries);
   } catch (error) {
@@ -72,7 +77,7 @@ const getAllEntries = async (req, res) => {
       query.brand = req.user.brand;
     }
     const entries = await CustomerEntry.find(query)
-      .populate('employeeId', 'name employeeId department brand')
+      .populate('employeeId', 'name employeeId department brand branch')
       .sort({ createdAt: -1 });
     res.json(entries);
   } catch (error) {
@@ -174,6 +179,31 @@ const uploadEntryBill = async (req, res) => {
   }
 };
 
+// @desc    Add a purchase bill for frequent purchases
+// @route   POST /api/customer-entries/:id/purchase-bills
+// @access  Private
+const addPurchaseBill = async (req, res) => {
+  try {
+    const { billNumber, billedDate } = req.body;
+    const entry = await CustomerEntry.findById(req.params.id);
+
+    if (!entry) {
+      return res.status(404).json({ message: 'Lead not found' });
+    }
+
+    if (!billNumber || !billedDate) {
+      return res.status(400).json({ message: 'Bill number and date are required' });
+    }
+
+    entry.purchaseBills.push({ billNumber, billedDate });
+    const updatedEntry = await entry.save();
+    res.json(updatedEntry);
+  } catch (error) {
+    console.error('ADD PURCHASE BILL ERROR:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createEntry,
   getEmployeeEntries,
@@ -181,5 +211,6 @@ module.exports = {
   updateEntryStatus,
   deleteEntry,
   updateEntryPhoto,
-  uploadEntryBill
+  uploadEntryBill,
+  addPurchaseBill
 };

@@ -18,6 +18,14 @@ const customerEntrySchema = new mongoose.Schema({
     type: String,
     default: '-'
   },
+  area: {
+    type: String,
+    default: '-'
+  },
+  pincode: {
+    type: String,
+    default: '-'
+  },
   phone: {
     type: String,
     required: true
@@ -29,6 +37,10 @@ const customerEntrySchema = new mongoose.Schema({
   source: {
     type: String,
     default: 'WEBSITE'
+  },
+  referredBy: {
+    type: String,
+    default: '-'
   },
   serviceInterest: {
     type: String,
@@ -55,10 +67,19 @@ const customerEntrySchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  purchaseBills: [{
+    billNumber: { type: String, required: true },
+    billedDate: { type: Date, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }],
   brand: {
     type: String,
     enum: ['Bosch', 'Furniture', 'None'],
     default: 'None'
+  },
+  branch: {
+    type: String,
+    default: 'Main'
   }
 }, {
   timestamps: true

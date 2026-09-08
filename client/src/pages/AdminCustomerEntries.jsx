@@ -5,8 +5,11 @@ import { useOutletContext } from 'react-router-dom';
 import api from '../services/api';
 import CustomerEntryDrawer from '../components/CustomerEntryDrawer';
 import CustomerDetailsDrawer from '../components/CustomerDetailsDrawer';
+import toast from 'react-hot-toast';
+import { useConfirm } from '../context/ConfirmContext';
 
 const AdminCustomerEntries = () => {
+  const confirm = useConfirm();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,19 +44,24 @@ const AdminCustomerEntries = () => {
 
   const handleDeleteLead = async (e, leadId) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure want to delete this ?')) {
+    if (await confirm('Are you sure want to delete this lead?')) {
       try {
         await api.delete(`/customer-entries/${leadId}`);
+        toast.success('Lead deleted successfully');
         fetchEntries(); // Refresh list after deletion
       } catch (err) {
         console.error('Failed to delete lead', err);
-        alert('Failed to delete lead.');
+        toast.error('Failed to delete lead.');
       }
     }
   };
 
   const filteredEntries = entries
     .filter(entry => {
+      // Exclude qualified clients from Leads tab
+      if (entry.status === 'QUALIFIED' || entry.status === 'QUALIFIED LEAD') {
+        return false;
+      }
       const searchLower = (searchTerm || globalSearch).toLowerCase();
       return entry.name?.toLowerCase().includes(searchLower) ||
              entry.company?.toLowerCase().includes(searchLower) ||
@@ -96,12 +104,12 @@ const AdminCustomerEntries = () => {
            />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <button className="p-2 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors text-gray-500">
             <SlidersHorizontal size={18} />
           </button>
-          <button onClick={() => setIsDrawerOpen(true)} className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-primary-dark transition-colors shadow-sm">
-            <Plus size={16} /> ADD LEAD
+          <button onClick={() => setIsDrawerOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl font-bold shadow-md shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 text-sm">
+            <Plus size={18} /> Add Lead
           </button>
         </div>
       </div>
@@ -168,7 +176,7 @@ const AdminCustomerEntries = () => {
                   {getPriorityBadge(entry.priority)}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center justify-end gap-3 opacity-100 transition-opacity">
                     <button 
                       onClick={() => {
                         setSelectedLead(entry);

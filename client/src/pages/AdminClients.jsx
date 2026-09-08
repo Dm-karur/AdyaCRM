@@ -84,9 +84,9 @@ const AdminClients = () => {
            />
         </div>
 
-        <div className="flex items-center gap-3">
-          <button onClick={() => setIsDrawerOpen(true)} className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-primary-dark transition-colors shadow-sm">
-            <Plus size={16} /> ADD CLIENT
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button onClick={() => setIsDrawerOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl font-bold shadow-md shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 text-sm">
+            <Plus size={18} /> Add Client
           </button>
         </div>
       </div>
@@ -146,7 +146,7 @@ const AdminClients = () => {
                   {entry.serviceInterest !== '-' ? entry.serviceInterest : 'N/A'}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center justify-end gap-3 opacity-100 transition-opacity">
                     <button 
                       onClick={() => {
                         setSelectedLead(entry);
@@ -242,6 +242,8 @@ const AdminClients = () => {
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
         onSuccess={handleSuccess}
+        mode="client"
+        isClient={true}
       />
       <CustomerDetailsDrawer
         isOpen={isDetailsDrawerOpen}

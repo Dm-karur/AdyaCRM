@@ -102,13 +102,15 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="card border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col justify-center items-center p-8 text-center">
-              <Users size={40} className="text-blue-500 mb-3" />
-              <h3 className="text-4xl font-bold text-gray-800">{employees.length}</h3>
-              <p className="text-gray-600 font-medium mt-1">Total<br/>Employees</p>
-            </div>
+            {user?.role === 'Admin' && (
+              <div className="card border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col justify-center items-center p-8 text-center">
+                <Users size={40} className="text-blue-500 mb-3" />
+                <h3 className="text-4xl font-bold text-gray-800">{employees.length}</h3>
+                <p className="text-gray-600 font-medium mt-1">Total<br/>Employees</p>
+              </div>
+            )}
             
-            <div className="card border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 flex flex-col justify-center items-center p-8 text-center">
+            <div className={`card border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 flex flex-col justify-center items-center p-8 text-center ${user?.role !== 'Admin' ? 'md:col-span-2' : ''}`}>
               <Calendar size={40} className="text-purple-500 mb-3" />
               <h3 className="text-4xl font-bold text-gray-800">{new Date().toLocaleString('default', { month: 'short' })}</h3>
               <p className="text-gray-600 font-medium mt-1">Current<br/>Month</p>

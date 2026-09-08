@@ -1,27 +1,86 @@
 import React, { useState, useContext } from 'react';
-import { X, User, Building, Mail, Phone, CheckCircle } from 'lucide-react';
+import { X, User, Building, Mail, Phone, CheckCircle, ChevronDown, Search } from 'lucide-react';
 import api from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 
-const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
+const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient, mode = 'lead', isClient = false }) => {
   const { user } = useContext(AuthContext);
+  const activeIsClient = isClient || mode === 'client';
+
   const [formData, setFormData] = useState({
     name: '',
     company: '',
     email: '',
     phone: '',
-    source: 'Website',
-    serviceInterest: 'Washing Machine',
+    area: '',
+    pincode: '',
+    source: '',
+    referredBy: '',
+    serviceInterest: [],
     budget: '',
-    status: 'New',
+    status: activeIsClient ? 'Qualified' : 'New',
     priority: 'Warm'
   });
   const [otherServiceInterest, setOtherServiceInterest] = useState('');
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [existingClient, setExistingClient] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  
+  const [allEntries, setAllEntries] = useState([]);
+  const [matchingEntries, setMatchingEntries] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: '',
+        company: '',
+        email: '',
+        phone: '',
+        area: '',
+        pincode: '',
+        source: '',
+        referredBy: '',
+        serviceInterest: [],
+        budget: '',
+        status: activeIsClient ? 'Qualified' : 'New',
+        priority: 'Warm'
+      });
+      setOtherServiceInterest('');
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setError('');
+      setExistingClient(null);
+      fetchEntries();
+    }
+  }, [isOpen, activeIsClient]);
+
+  const fetchEntries = async () => {
+    try {
+      const endpoint = user?.role === 'Admin' ? '/customer-entries/all' : '/customer-entries';
+      const { data } = await api.get(endpoint);
+      setAllEntries(data);
+    } catch (err) {
+      console.error('Failed to fetch entries for suggestions', err);
+    }
+  };
+
+  React.useEffect(() => {
+    if (formData.phone && formData.phone.replace(/\D/g, '').length >= 6) {
+      const cleanPhone = formData.phone.replace(/\D/g, '');
+      const matches = allEntries.filter(entry => 
+        entry.phone && entry.phone.replace(/\D/g, '').includes(cleanPhone)
+      );
+      setMatchingEntries(matches);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [formData.phone, allEntries]);
 
   const handleChange = (e) => {
     setFormData({
@@ -37,15 +96,26 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
     setExistingClient(null);
 
     // Transform fields to match backend enum constraints
-    let finalServiceInterest = formData.serviceInterest;
-    if (finalServiceInterest === 'Others') {
-      finalServiceInterest = otherServiceInterest;
+    let finalServiceInterest = [...formData.serviceInterest];
+    if (finalServiceInterest.includes('Others') && otherServiceInterest.trim()) {
+      // Remove 'Others' and add the custom text
+      finalServiceInterest = finalServiceInterest.filter(item => item !== 'Others');
+      finalServiceInterest.push(otherServiceInterest.trim());
+    }
+    const serviceInterestString = finalServiceInterest.length > 0 ? finalServiceInterest.join(', ') : '-';
+
+    let rawStatus = formData.status.toUpperCase();
+    let formattedStatus = rawStatus;
+    if (rawStatus === 'QUALIFIED') {
+      formattedStatus = 'QUALIFIED LEAD';
+    } else if (!rawStatus.includes('LEAD')) {
+      formattedStatus = rawStatus + ' LEAD';
     }
 
     const payloadData = {
       ...formData,
-      serviceInterest: finalServiceInterest,
-      status: formData.status.toUpperCase() + ' LEAD',
+      serviceInterest: serviceInterestString,
+      status: formattedStatus,
       source: formData.source.toUpperCase(),
       priority: formData.priority.toUpperCase()
     };
@@ -59,12 +129,8 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
     }
 
     try {
-      await api.post('/customer-entries', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      onSuccess('Lead created successfully!');
+      await api.post('/customer-entries', formDataToSend);
+      onSuccess(activeIsClient ? 'Client created successfully!' : 'Lead created successfully!');
       onClose();
       // Reset form
       setFormData({
@@ -72,10 +138,13 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
         company: '',
         email: '',
         phone: '',
-        source: 'Website',
-        serviceInterest: 'Washing Machine',
+        area: '',
+        pincode: '',
+        source: '',
+        referredBy: '',
+        serviceInterest: [],
         budget: '',
-        status: 'New',
+        status: activeIsClient ? 'Qualified' : 'New',
         priority: 'Warm'
       });
       setOtherServiceInterest('');
@@ -86,7 +155,7 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
         setError('User already exists');
         setExistingClient(err.response.data.existingLead);
       } else {
-        setError(err.response?.data?.message || 'Failed to save lead');
+        setError(err.response?.data?.message || (activeIsClient ? 'Failed to save client' : 'Failed to save lead'));
       }
     } finally {
       setLoading(false);
@@ -110,7 +179,9 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
       >
         <div className="flex items-start justify-between p-8 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Create New Lead</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {activeIsClient ? 'Create New Client' : 'Create New Lead'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -204,6 +275,48 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
                       required
                       className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm placeholder:text-gray-400"
                     />
+                    
+                    {/* Suggestions Dropdown */}
+                    {showSuggestions && matchingEntries.length > 0 && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                        <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50 sticky top-0">
+                          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Suggested Matches</span>
+                          <button type="button" onClick={() => setShowSuggestions(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        {matchingEntries.map(entry => (
+                          <div key={entry._id} className="p-3 border-b border-gray-50 flex flex-col gap-2 hover:bg-gray-50/50 transition-colors">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                  {entry.name}
+                                  {entry.brand === 'Bosch' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>}
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 mt-0.5 flex items-center gap-1">
+                                  <Phone size={10} /> {entry.phone}
+                                </div>
+                              </div>
+                              <span className="px-2 py-0.5 rounded border border-gray-200 text-[9px] font-bold text-gray-500 uppercase tracking-wide bg-white">
+                                {entry.status}
+                              </span>
+                            </div>
+                            {onViewClient && (
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  onViewClient(entry);
+                                  setShowSuggestions(false);
+                                }}
+                                className="w-full py-1.5 text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors border border-primary/10 mt-1"
+                              >
+                                View Details
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -236,6 +349,38 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Area <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <svg className="absolute left-4 top-3.5 text-gray-400 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <input
+                      type="text"
+                      name="area"
+                      value={formData.area}
+                      onChange={handleChange}
+                      placeholder="Area / Location"
+                      required
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Pincode <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <svg className="absolute left-4 top-3.5 text-gray-400 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path></svg>
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={formData.pincode}
+                      onChange={handleChange}
+                      placeholder="Pincode"
+                      required
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -249,68 +394,134 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Marketing Source</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Marketing Source <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <select
                       name="source"
                       value={formData.source}
                       onChange={handleChange}
+                      required
                       className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none text-sm text-gray-700"
                     >
+                      <option value="" disabled>Select Source</option>
                       <option value="Walk-in">Walk-in</option>
                       <option value="Referral">Referral</option>
                       <option value="Google">Google</option>
+                      <option value="Social Media">Social Media</option>
+                      <option value="Banners">Banners</option>
                     </select>
                     <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                   </div>
+                  {formData.source === 'Referral' && (
+                    <div className="mt-3 transition-all">
+                      <input
+                        type="text"
+                        name="referredBy"
+                        value={formData.referredBy}
+                        onChange={handleChange}
+                        placeholder="By Whom?"
+                        required
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm placeholder:text-gray-400"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Service Interest</label>
+                <div className="md:col-span-2 relative">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Product Interested</label>
+                  
+                  {/* Custom Searchable Multi-Select Dropdown */}
                   <div className="relative">
-                    <select
-                      name="serviceInterest"
-                      value={formData.serviceInterest}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none text-sm text-gray-700"
+                    <div 
+                      className="min-h-[46px] w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl cursor-pointer flex flex-wrap items-center gap-2 transition-all hover:border-primary/50"
+                      onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
                     >
-                      {user?.brand === 'Furniture' ? (
-                        <>
-                          <option value="Cot">Cot</option>
-                          <option value="Mattress">Mattress</option>
-                          <option value="Dinning Table">Dinning Table</option>
-                          <option value="Office Table">Office Table</option>
-                          <option value="Sofas">Sofas</option>
-                          <option value="cupboard">Cupboard</option>
-                          <option value="Others">Others</option>
-                        </>
-                      ) : user?.brand === 'Bosch' ? (
-                        <>
-                          <option value="Frontload Washing Machine">Frontload Washing Machine</option>
-                          <option value="Topload washing machine">Topload Washing Machine</option>
-                          <option value="Fridge">Fridge</option>
-                          <option value="Dishwasher">Dishwasher</option>
-                          <option value="Mixxie">Mixxie</option>
-                          <option value="Chimney">Chimney</option>
-                          <option value="Others">Others</option>
-                        </>
+                      {formData.serviceInterest.length > 0 ? (
+                        formData.serviceInterest.map(item => (
+                          <span key={item} className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1.5 border border-primary/20">
+                            {item}
+                            <button 
+                              type="button" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFormData({ ...formData, serviceInterest: formData.serviceInterest.filter(i => i !== item) });
+                              }}
+                              className="hover:text-primary/70 focus:outline-none"
+                            >
+                              <X size={12} strokeWidth={3} />
+                            </button>
+                          </span>
+                        ))
                       ) : (
-                        <>
-                          <option value="Washing Machine">Washing Machine</option>
-                          <option value="Fridge">Fridge</option>
-                          <option value="Chimney">Chimney</option>
-                          <option value="Dishwasher">Dishwasher</option>
-                          <option value="Others">Others</option>
-                        </>
+                        <span className="text-gray-400 text-sm">Select products...</span>
                       )}
-                    </select>
-                    <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                      <div className="ml-auto text-gray-400">
+                        <ChevronDown size={18} className={`transition-transform duration-200 ${isProductDropdownOpen ? 'rotate-180' : ''}`} />
+                      </div>
                     </div>
+
+                    {isProductDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden">
+                        <div className="p-2 border-b border-gray-50 bg-gray-50/50">
+                          <div className="relative">
+                            <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                            <input 
+                              type="text" 
+                              placeholder="Search products..." 
+                              value={productSearch}
+                              onChange={(e) => setProductSearch(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto p-1">
+                          {(user?.brand === 'Furniture' 
+                            ? ['Cot', 'Mattress', 'Dinning Table', 'Office Table', 'Sofas', 'Cupboard', 'Others']
+                            : user?.brand === 'Bosch'
+                            ? ['Frontload Washing Machine', 'Topload Washing Machine', 'Fridge', 'Dishwasher', 'Mixxie', 'Chimney', 'Others']
+                            : ['Washing Machine', 'Fridge', 'Chimney', 'Dishwasher', 'Others']
+                          )
+                          .filter(option => option.toLowerCase().includes(productSearch.toLowerCase()))
+                          .map(option => {
+                            const isSelected = formData.serviceInterest.includes(option);
+                            return (
+                              <div 
+                                key={option}
+                                onClick={() => {
+                                  const current = formData.serviceInterest;
+                                  if (isSelected) {
+                                    setFormData({ ...formData, serviceInterest: current.filter(item => item !== option) });
+                                  } else {
+                                    setFormData({ ...formData, serviceInterest: [...current, option] });
+                                  }
+                                }}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-primary/5 text-primary' : 'hover:bg-gray-50 text-gray-700'}`}
+                              >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-gray-300'}`}>
+                                  {isSelected && <CheckCircle size={12} className="text-white" strokeWidth={3} />}
+                                </div>
+                                <span className={`text-sm ${isSelected ? 'font-bold' : 'font-medium'}`}>{option}</span>
+                              </div>
+                            );
+                          })}
+                          {(user?.brand === 'Furniture' 
+                            ? ['Cot', 'Mattress', 'Dinning Table', 'Office Table', 'Sofas', 'Cupboard', 'Others']
+                            : user?.brand === 'Bosch'
+                            ? ['Frontload Washing Machine', 'Topload Washing Machine', 'Fridge', 'Dishwasher', 'Mixxie', 'Chimney', 'Others']
+                            : ['Washing Machine', 'Fridge', 'Chimney', 'Dishwasher', 'Others']
+                          ).filter(option => option.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                            <div className="px-4 py-6 text-center text-sm text-gray-500">
+                              No products found matching "{productSearch}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {formData.serviceInterest === 'Others' && (
+                  {formData.serviceInterest.includes('Others') && (
                     <div className="mt-3 transition-all">
                       <input
                         type="text"
@@ -338,7 +549,7 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div className={formData.status === 'Qualified' ? 'col-span-2' : ''}>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
                     <select
                       name="status"
@@ -351,19 +562,21 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
                       <option value="Qualified">Qualified</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Priority</label>
-                    <select
-                      name="priority"
-                      value={formData.priority}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none text-sm text-gray-700"
-                    >
-                      <option value="Warm">Warm</option>
-                      <option value="Cold">Cold</option>
-                      <option value="Hot">Hot</option>
-                    </select>
-                  </div>
+                  {formData.status !== 'Qualified' && (
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Priority</label>
+                      <select
+                        name="priority"
+                        value={formData.priority}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none text-sm text-gray-700"
+                      >
+                        <option value="Warm">Warm</option>
+                        <option value="Cold">Cold</option>
+                        <option value="Hot">Hot</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -392,7 +605,7 @@ const CustomerEntryDrawer = ({ isOpen, onClose, onSuccess, onViewClient }) => {
             ) : (
               <>
                 <CheckCircle size={18} className="text-primary" />
-                Register Lead
+                {activeIsClient ? 'Register Client' : 'Register Lead'}
               </>
             )}
           </button>

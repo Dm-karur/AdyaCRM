@@ -111,13 +111,6 @@ const Attendance = () => {
       return;
     }
 
-    if (!isWithinGeofence && !user?.isFieldWorker) {
-      setFeedbackMsg('You are outside the allowed office geofence.');
-      setIsLoading(false);
-      setProcessingStep('');
-      return;
-    }
-
     try {
       // Step 1: Reverse geocode the address
       let address = 'Address Not Available';

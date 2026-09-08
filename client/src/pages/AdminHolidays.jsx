@@ -1,42 +1,45 @@
 import React, { useState } from 'react';
 import api from '../services/api';
 import { Calendar } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useConfirm } from '../context/ConfirmContext';
 
 const AdminHolidays = () => {
   const [formData, setFormData] = useState({ date: '', reason: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const confirm = useConfirm();
 
   const handleHolidaySubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!formData.date || !formData.reason) return alert('Please provide both date and reason.');
+    if (!formData.date || !formData.reason) return toast.error('Please provide both date and reason.');
     setIsSubmitting(true);
     try {
       await api.post('/admin/attendance/mark-holiday', {
         date: formData.date,
         reason: formData.reason
       });
-      alert('Holiday marked for all employees successfully');
+      toast.success('Holiday marked for all employees successfully');
       setFormData({ date: '', reason: '' });
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to mark holiday');
+      toast.error(err.response?.data?.message || 'Failed to mark holiday');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleRemoveHoliday = async () => {
-    if (!formData.date) return alert('Please select a date to remove the holiday from.');
-    if (!window.confirm('Are you sure you want to remove the holiday for this date? This will delete all holiday attendance records for that day.')) return;
+    if (!formData.date) return toast.error('Please select a date to remove the holiday from.');
+    if (!(await confirm('Are you sure you want to remove the holiday for this date? This will delete all holiday attendance records for that day.'))) return;
     
     setIsSubmitting(true);
     try {
       await api.post('/admin/attendance/remove-holiday', {
         date: formData.date
       });
-      alert('Holiday removed for all employees successfully');
+      toast.success('Holiday removed for all employees successfully');
       setFormData({ date: '', reason: '' });
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to remove holiday');
+      toast.error(err.response?.data?.message || 'Failed to remove holiday');
     } finally {
       setIsSubmitting(false);
     }

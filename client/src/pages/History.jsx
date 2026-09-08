@@ -25,7 +25,7 @@ const History = () => {
 
   const getPhotoUrl = (photo) => {
     if (!photo) return null;
-    return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+    return photo;
   };
 
   return (
@@ -50,7 +50,7 @@ const History = () => {
             <thead>
               <tr className="border-b text-sm text-gray-500 uppercase tracking-wider font-bold">
                 <th className="pb-3 pr-4">Date</th>
-                <th className="pb-3 pr-4 text-center">Punch Image</th>
+                <th className="pb-3 pr-4 text-center">Images (In/Out)</th>
                 <th className="pb-3 pr-4">Punch In</th>
                 <th className="pb-3 pr-4">Punch Out</th>
                 <th className="pb-3 pr-4 text-center">Status</th>
@@ -65,17 +65,33 @@ const History = () => {
                   <tr key={record._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                     <td className="py-4 pr-4 font-bold text-gray-700">{new Date(record.date).toLocaleDateString()}</td>
                     <td className="py-4 pr-4 text-center">
-                      {displayPhoto ? (
-                        <img 
-                          src={getPhotoUrl(displayPhoto)} 
-                          alt="Punch" 
-                          className="w-14 h-14 mx-auto rounded-xl object-cover border-2 border-white shadow-soft cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                          title="Click to view full attendance proof"
-                          onClick={() => setPreviewImage(getPhotoUrl(displayPhoto))}
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-xs font-medium bg-gray-100 px-2 py-1 rounded">No Photo</span>
-                      )}
+                      <div className="flex items-center justify-center gap-2">
+                        {displayPhoto ? (
+                          <img 
+                            src={getPhotoUrl(displayPhoto)} 
+                            alt="Punch In" 
+                            className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-soft cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                            title="Punch In: Click to view full proof"
+                            onClick={() => setPreviewImage(getPhotoUrl(displayPhoto))}
+                          />
+                        ) : (
+                          <span className="text-gray-400 text-[10px] font-medium bg-gray-100 px-1 py-0.5 rounded">No IN Photo</span>
+                        )}
+                        
+                        {record.punchOut?.time && (
+                          (record.punchOut?.attendanceImage || record.punchOut?.photo) ? (
+                            <img
+                              src={getPhotoUrl(record.punchOut.attendanceImage || record.punchOut.photo)}
+                              alt="Punch Out"
+                              onClick={() => setPreviewImage(getPhotoUrl(record.punchOut.attendanceImage || record.punchOut.photo))}
+                              className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-soft cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                              title="Punch Out: Click to view full proof"
+                            />
+                          ) : (
+                            <span className="text-gray-400 text-[10px] font-medium bg-gray-100 px-1 py-0.5 rounded">No OUT Photo</span>
+                          )
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 pr-4 text-sm font-medium text-gray-600">
                       {record.punchIn?.time ? new Date(record.punchIn.time).toLocaleTimeString() : '--:--'}
@@ -91,23 +107,53 @@ const History = () => {
                       </span>
                     </td>
                     <td className="py-4 pr-4">
-                      {record.punchIn?.location?.latitude ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs text-gray-500 max-w-[200px] truncate" title={record.punchIn.location.address}>
-                            {record.punchIn.location.address || 'Address Not Available'}
-                          </span>
-                          <a
-                            href={`https://www.google.com/maps?q=${record.punchIn.location.latitude},${record.punchIn.location.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-primary hover:text-accent font-bold text-xs"
-                          >
-                            <MapPin size={12} /> Open in Maps
-                          </a>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-300 font-medium">No GPS</span>
-                      )}
+                      <div className="flex flex-col gap-3">
+                        {record.punchIn?.location?.latitude ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">IN Location</span>
+                            <span className="text-xs text-gray-500 max-w-[200px] truncate" title={record.punchIn.location.address}>
+                              {record.punchIn.location.address || 'Address Not Available'}
+                            </span>
+                            <a
+                              href={`https://www.google.com/maps?q=${record.punchIn.location.latitude},${record.punchIn.location.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-primary hover:text-accent font-bold text-xs"
+                            >
+                              <MapPin size={12} /> Open in Maps
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">IN Location</span>
+                            <span className="text-sm text-gray-300 font-medium">No GPS</span>
+                          </div>
+                        )}
+
+                        {record.punchOut?.time && (
+                          record.punchOut?.location?.latitude ? (
+                            <div className="flex flex-col gap-1 border-t border-gray-100 pt-1">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OUT Location</span>
+                              <span className="text-xs text-gray-500 max-w-[200px] truncate" title={record.punchOut.location.address}>
+                                {record.punchOut.location.address || 'Address Not Available'}
+                              </span>
+                              <a
+                                href={`https://www.google.com/maps?q=${record.punchOut.location.latitude},${record.punchOut.location.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-primary hover:text-accent font-bold text-xs"
+                              >
+                                <MapPin size={12} /> Open in Maps
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1 border-t border-gray-100 pt-1">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OUT Location</span>
+                              <span className="text-sm text-gray-300 font-medium">No GPS</span>
+                            </div>
+                          )
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -120,22 +166,22 @@ const History = () => {
       {/* Image Preview Modal (Professional Proof) */}
       {previewImage && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer backdrop-blur-sm"
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer backdrop-blur-sm"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-w-3xl w-full" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="fixed top-6 left-6 z-[60] bg-white/20 text-white rounded-full p-3 hover:bg-white/40 transition-colors backdrop-blur-md shadow-lg"
+          >
+            <X size={24} />
+          </button>
+          <div className="relative max-w-4xl w-full h-full max-h-[90vh] flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
             <img
               src={previewImage}
               alt="Attendance Proof"
-              className="w-full rounded-2xl shadow-2xl"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             />
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 bg-black/60 text-white rounded-full p-2.5 hover:bg-black transition-colors backdrop-blur-md"
-            >
-              <X size={20} />
-            </button>
-            <div className="absolute -bottom-8 left-0 right-0 text-center text-white/70 text-sm">
+            <div className="absolute -bottom-8 left-0 right-0 text-center text-white/70 text-sm font-medium">
               Permanent Attendance Record
             </div>
           </div>

@@ -14,9 +14,24 @@ const AdminFollowups = () => {
   const [leadHistory, setLeadHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+
   useEffect(() => {
     fetchFollowups();
+    fetchEmployees();
   }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      const { data } = await api.get('/admin/employees');
+      setEmployees(data);
+    } catch (err) {
+      console.error('Failed to fetch employees', err);
+    }
+  };
 
   const fetchFollowups = async () => {
     try {
@@ -71,10 +86,16 @@ const AdminFollowups = () => {
   };
 
   const filteredFollowups = followups
-    .filter(f => 
-      f.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.leadId?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(f => {
+      const searchMatch = (f.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (f.leadId?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const empMatch = selectedEmployee 
+        ? (f.createdBy?._id === selectedEmployee._id || f.leadId?.employeeId?._id === selectedEmployee._id)
+        : true;
+
+      return searchMatch && empMatch;
+    })
     .sort((a, b) => {
       const aDone = a.status === 'DONE';
       const bDone = b.status === 'DONE';
@@ -119,13 +140,56 @@ const AdminFollowups = () => {
               placeholder="Search leads, notes..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-full text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all outline-none"
             />
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-gray-600 uppercase border border-gray-200 rounded-full hover:bg-gray-50 transition-colors bg-white shrink-0">
-            <Filter size={14} /> <span className="hidden sm:inline">FILTERS</span>
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+            >
+              {selectedEmployee ? selectedEmployee.name : 'All Employees'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+
+            {showEmployeeDropdown && (
+              <div className="absolute top-full right-0 md:left-0 md:right-auto mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="p-2 border-b border-gray-100">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
+                    <input 
+                      type="text"
+                      placeholder="Search employee..."
+                      value={employeeSearchTerm}
+                      onChange={(e) => setEmployeeSearchTerm(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto p-2">
+                  <button
+                    onClick={() => { setSelectedEmployee(null); setShowEmployeeDropdown(false); }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${!selectedEmployee ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    All Employees
+                  </button>
+                  {employees
+                    .filter(emp => emp.name.toLowerCase().includes(employeeSearchTerm.toLowerCase()))
+                    .map(emp => (
+                      <button
+                        key={emp._id}
+                        onClick={() => { setSelectedEmployee(emp); setShowEmployeeDropdown(false); setEmployeeSearchTerm(''); }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium mt-1 ${selectedEmployee?._id === emp._id ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        {emp.name}
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -174,7 +238,7 @@ const AdminFollowups = () => {
                                 {lead.name || 'Unknown Lead'}
                                 {lead.brand === 'Bosch' && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Bosch Lead"></span>}
                               </span>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{lead.serviceInterest || 'SEO'}</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{lead.serviceInterest && lead.serviceInterest !== '-' ? lead.serviceInterest : ''}</span>
                             </div>
                           </div>
                         </td>
@@ -214,6 +278,9 @@ const AdminFollowups = () => {
                             </div>
                             <p className="text-sm font-medium text-gray-500 italic truncate max-w-[250px]">
                               {followup.description}
+                            </p>
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase mt-0.5">
+                              Created by: <span className="text-primary">{followup.creatorName || 'Unknown'}</span>
                             </p>
                           </div>
                         </td>
@@ -270,7 +337,7 @@ const AdminFollowups = () => {
                             {lead.name || 'Unknown Lead'}
                             {lead.brand === 'Bosch' && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Bosch Lead"></span>}
                           </span>
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{lead.serviceInterest || 'SEO'}</span>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{lead.serviceInterest && lead.serviceInterest !== '-' ? lead.serviceInterest : ''}</span>
                         </div>
                       </div>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isDone ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
@@ -291,6 +358,9 @@ const AdminFollowups = () => {
                       </div>
                       <p className="text-sm font-medium text-gray-600 italic">
                         {followup.description}
+                      </p>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase mt-1.5">
+                        Created by: <span className="text-primary">{followup.creatorName || 'Unknown'}</span>
                       </p>
                     </div>
 

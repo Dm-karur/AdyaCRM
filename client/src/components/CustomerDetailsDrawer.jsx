@@ -4,6 +4,8 @@ import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 applyPlugin(jsPDF);
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const numberToWords = (num) => {
   const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
@@ -21,6 +23,7 @@ const numberToWords = (num) => {
 };
 
 const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
+  const { user } = React.useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('Details');
   const [leftTab, setLeftTab] = useState('Activities');
   const [followups, setFollowups] = useState([]);
@@ -36,13 +39,16 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
 
-  // Followup modal state
   const [isFollowupModalOpen, setIsFollowupModalOpen] = useState(false);
   const [followupForm, setFollowupForm] = useState({
     date: '',
     description: ''
   });
   const [isSubmittingFollowup, setIsSubmittingFollowup] = useState(false);
+
+  // Purchase Bill state
+  const [purchaseBillForm, setPurchaseBillForm] = useState({ billNumber: '', billedDate: '', product: '' });
+  const [isSubmittingPurchaseBill, setIsSubmittingPurchaseBill] = useState(false);
 
   useEffect(() => {
     if (isOpen && lead) {
@@ -77,13 +83,11 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
     formData.append('photo', file);
 
     try {
-      const { data } = await api.put(`/customer-entries/${lead._id}/photo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const { data } = await api.post(`/customer-entries/${lead._id}/photo`, formData);
       if (onLeadUpdated) onLeadUpdated(data);
     } catch (error) {
       console.error('Failed to upload photo', error);
-      alert('Failed to upload photo');
+      toast.error('Failed to upload photo');
     }
   };
 
@@ -96,14 +100,12 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
     formData.append('bill', file);
 
     try {
-      const { data } = await api.put(`/customer-entries/${lead._id}/bills`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const { data } = await api.post(`/customer-entries/${lead._id}/bills`, formData);
       if (onLeadUpdated) onLeadUpdated(data);
-      alert('Bill uploaded successfully!');
+      toast.success('Bill uploaded successfully!');
     } catch (error) {
       console.error('Failed to upload bill', error);
-      alert(error.response?.data?.message || 'Failed to upload bill');
+      toast.error(error.response?.data?.message || 'Failed to upload bill');
     } finally {
       setIsUploadingBill(false);
       // Reset input
@@ -120,7 +122,7 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
         items: quoteItems,
         customerAddress: customerAddress
       });
-      alert('Quote generated successfully! The PDF will now download.');
+      toast.success('Quote generated successfully! The PDF will now download.');
       setIsQuoteModalOpen(false);
       setQuoteItems([{ product: '', model: '', mrp: '', discountedPrice: '', quantity: 1 }]);
       setCustomerAddress('');
@@ -132,7 +134,7 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
       downloadQuotePDF(data);
     } catch (error) {
       console.error(error);
-      alert('Failed to generate quote.');
+      toast.error('Failed to generate quote.');
     } finally {
       setIsSubmittingQuote(false);
     }
@@ -151,9 +153,56 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
       fetchFollowups(); // Refresh activities and follow-ups list
     } catch (error) {
       console.error(error);
-      alert('Failed to add follow-up.');
+      toast.error('Failed to add follow-up.');
     } finally {
       setIsSubmittingFollowup(false);
+    }
+  };
+
+  const handlePurchaseBillSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingPurchaseBill(true);
+    try {
+      const { data } = await api.post(`/customer-entries/${lead._id}/purchase-bills`, purchaseBillForm);
+      if (onLeadUpdated) onLeadUpdated(data);
+      setPurchaseBillForm({ billNumber: '', billedDate: '', product: '' });
+      toast.success('Purchase bill added successfully!');
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Failed to add purchase bill.');
+    } finally {
+      setIsSubmittingPurchaseBill(false);
+    }
+  };
+
+  const viewPurchaseBill = (bill) => {
+    const html = `
+      <html>
+        <head>
+          <title>Purchase Bill Details</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 40px; background-color: #f9fafb; color: #111827; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+            h1 { color: #4F46E5; margin-top: 0; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+            .detail { margin: 15px 0; font-size: 16px; }
+            .label { font-weight: bold; color: #6b7280; width: 120px; display: inline-block; }
+            .value { font-weight: 600; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Purchase Bill Details</h1>
+            <div class="detail"><span class="label">Bill Number:</span> <span class="value">${bill.billNumber}</span></div>
+            <div class="detail"><span class="label">Billed Date:</span> <span class="value">${new Date(bill.billedDate).toLocaleDateString()}</span></div>
+            <div class="detail"><span class="label">Product:</span> <span class="value">${bill.product || 'N/A'}</span></div>
+          </div>
+        </body>
+      </html>
+    `;
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(html);
+      newWindow.document.close();
     }
   };
 
@@ -217,6 +266,9 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
       doc.setFont('helvetica', 'normal');
       doc.text(`Estimate No.: ${String(quote._id || '').slice(-6).toUpperCase()}`, 196, 73, { align: 'right' });
       doc.text(`Date: ${formatDate(quote.date)}`, 196, 78, { align: 'right' });
+      
+      const creatorName = quote.createdBy?.name || user?.name || lead.employeeId?.name || 'Unknown';
+      doc.text(`Created By: ${creatorName}`, 196, 83, { align: 'right' });
 
       doc.setFont('helvetica', 'bold');
       const customerName = String(lead.name || 'Unknown Lead');
@@ -292,8 +344,8 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
       const safeProduct = String(items[0].product || 'Product').replace(/\s+/g, '_');
       doc.save(`Estimate_${safeName}_${safeProduct}.pdf`);
     } catch (error) {
-      alert(`Error generating PDF: ${error.message}`);
-      console.error(error);
+      console.error('Error generating PDF:', error);
+      toast.error(`Error generating PDF: ${error.message}`);
     }
   };
 
@@ -302,10 +354,11 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US');
+    if (isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
-  const tabs = ['Details', 'Quotes', 'Follow Ups', 'Bills'];
+  const tabs = ['Details', 'Quotes', 'Follow Ups', 'Bills', 'Purchases'];
 
   return (
     <>
@@ -429,14 +482,15 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
                         <div className="flex justify-between items-start mb-2 pl-2">
                           <span className="font-bold text-gray-900 text-sm flex items-center gap-1">
                             <Clock size={14} className={f.status === 'DONE' ? 'text-emerald-500' : 'text-primary'} />
-                            {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            {!isNaN(d.getTime()) ? d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A'}
                           </span>
                           {f.status === 'DONE' && (
                             <CheckCircle2 size={16} className="text-emerald-500" />
                           )}
                         </div>
-                        <div className="text-sm text-gray-600 bg-blue-50/50 p-3 rounded-lg border border-blue-100 ml-2">
+                        <div className="text-sm text-gray-600 bg-blue-50/50 p-3 rounded-lg border border-blue-100 ml-2 mt-1">
                           <p className="text-gray-700 font-medium text-xs">{f.description}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase mt-1">Created by: <span className="text-primary">{f.creatorName || 'Unknown'}</span></p>
                         </div>
                       </div>
                     );
@@ -483,7 +537,7 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
 
               <div className="flex items-end justify-between mb-8">
                 <div>
-                  <h1 className="text-4xl font-extrabold text-[#1e293b] tracking-tight">{lead.serviceInterest || lead.source || 'SEO'}</h1>
+                  <h1 className="text-4xl font-extrabold text-[#1e293b] tracking-tight">{lead.serviceInterest && lead.serviceInterest !== '-' ? lead.serviceInterest : (lead.source || '')}</h1>
                   <div className="flex items-center gap-4 mt-4 text-sm font-bold text-gray-400">
                     <span>Created: {formatDate(lead.createdAt)}</span>
                     <button
@@ -501,13 +555,18 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
                 {tabs.map(tab => (
                   <button
                     key={tab}
-                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all border ${activeTab === tab
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all border ${activeTab === tab
                       ? 'bg-[#1e293b] text-white border-[#1e293b] shadow-md'
                       : 'bg-white text-gray-500 border-gray-200 shadow-sm hover:bg-gray-50'
                       }`}
                     onClick={() => setActiveTab(tab)}
                   >
-                    {tab}
+                    <span>{tab}</span>
+                    {tab === 'Purchases' && lead?.purchaseBills?.length > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+                        {lead.purchaseBills.length}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -575,11 +634,16 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
                                   <h4 className="text-lg font-bold text-gray-900 truncate max-w-[180px]">{title}</h4>
                                   <p className="text-sm font-medium text-gray-500">{subTitle}</p>
                                 </div>
-                                <div className="flex flex-col items-end gap-2">
+                                <div className="flex flex-col items-end gap-1.5">
                                   <span className="text-[10px] font-bold text-gray-400 uppercase">{formatDate(quote.date)}</span>
+                                  {quote.createdBy?.name && (
+                                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
+                                      By: <span className="text-primary">{quote.createdBy.name}</span>
+                                    </span>
+                                  )}
                                   <button
                                     onClick={() => downloadQuotePDF(quote)}
-                                    className="text-primary hover:text-primary-dark transition-colors bg-primary/10 p-1.5 rounded-md flex items-center gap-1.5"
+                                    className="text-primary hover:text-primary-dark transition-colors bg-primary/10 p-1.5 rounded-md flex items-center gap-1.5 mt-1"
                                   >
                                     <Download size={14} /> <span className="text-[10px] font-bold uppercase">PDF</span>
                                   </button>
@@ -635,14 +699,15 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
                             <div className="flex justify-between items-start mb-3">
                               <span className="font-bold text-gray-900 flex items-center gap-2">
                                 <Clock size={16} className={f.status === 'DONE' ? 'text-emerald-500' : 'text-primary'} />
-                                {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                {!isNaN(d.getTime()) ? d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A'}
                               </span>
                               <span className={`px-2.5 py-1 rounded text-[10px] font-extrabold uppercase tracking-wider ${f.status === 'DONE' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                                 {f.status}
                               </span>
                             </div>
-                            <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-1">
                               {f.description}
+                              <p className="text-[10px] text-gray-400 font-bold uppercase mt-2">Created by: <span className="text-primary">{f.creatorName || 'Unknown'}</span></p>
                             </div>
                           </div>
                         );
@@ -698,7 +763,82 @@ const CustomerDetailsDrawer = ({ isOpen, onClose, lead, onLeadUpdated }) => {
                 </div>
               )}
 
-              {activeTab !== 'Details' && activeTab !== 'Quotes' && activeTab !== 'Follow Ups' && activeTab !== 'Bills' && (
+              {activeTab === 'Purchases' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">Frequent Purchases</h3>
+                  </div>
+
+                  {user?.role !== 'Admin' && (
+                    <form onSubmit={handlePurchaseBillSubmit} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-6 flex flex-col md:flex-row items-end gap-4">
+                      <div className="flex-1 w-full">
+                        <label className="block text-xs font-bold text-gray-500 mb-1">Bill Number <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          value={purchaseBillForm.billNumber}
+                          onChange={(e) => setPurchaseBillForm({ ...purchaseBillForm, billNumber: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm text-gray-700"
+                          placeholder="Enter Bill Number"
+                        />
+                      </div>
+                      <div className="flex-1 w-full">
+                        <label className="block text-xs font-bold text-gray-500 mb-1">Product <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          value={purchaseBillForm.product}
+                          onChange={(e) => setPurchaseBillForm({ ...purchaseBillForm, product: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm text-gray-700"
+                          placeholder="Enter Product"
+                        />
+                      </div>
+                      <div className="flex-1 w-full">
+                        <label className="block text-xs font-bold text-gray-500 mb-1">Billed Date <span className="text-red-500">*</span></label>
+                        <input
+                          type="date"
+                          required
+                          value={purchaseBillForm.billedDate}
+                          onChange={(e) => setPurchaseBillForm({ ...purchaseBillForm, billedDate: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm text-gray-700"
+                        />
+                      </div>
+                      <button type="submit" disabled={isSubmittingPurchaseBill} className="w-full md:w-auto bg-primary text-white px-5 py-2 h-[38px] rounded-lg text-sm font-bold hover:bg-primary-dark transition-colors disabled:opacity-50">
+                        {isSubmittingPurchaseBill ? 'Adding...' : 'Add Bill'}
+                      </button>
+                    </form>
+                  )}
+
+                  {!lead.purchaseBills || lead.purchaseBills.length === 0 ? (
+                    <div className="h-48 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center text-gray-400 bg-white">
+                      <p className="font-bold text-sm uppercase tracking-widest text-gray-400">No Purchase Bills</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {lead.purchaseBills.map((bill, index) => (
+                        <div 
+                          key={index} 
+                          onClick={() => viewPurchaseBill(bill)}
+                          className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/30 transition-colors cursor-pointer"
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-900">Bill: {bill.billNumber}</span>
+                            {bill.product && <span className="text-sm text-gray-700 mt-0.5">{bill.product}</span>}
+                            <span className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <Clock size={12} /> {formatDate(bill.billedDate)}
+                            </span>
+                          </div>
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <FileText size={18} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab !== 'Details' && activeTab !== 'Quotes' && activeTab !== 'Follow Ups' && activeTab !== 'Bills' && activeTab !== 'Purchases' && (
                 <div className="h-64 flex flex-col items-center justify-center text-gray-400">
                   <p className="font-bold text-sm uppercase tracking-widest text-gray-400">Content for {activeTab} coming soon</p>
                 </div>

@@ -4,7 +4,7 @@ const User = require('../models/User');
 // @route   POST /api/employees
 // @access  Private/Admin
 const createEmployee = async (req, res) => {
-  const { name, employeeId, password, role, department, shift, isFieldWorker, salary, shiftStart, shiftEnd, salaryType, brand } = req.body;
+  const { name, employeeId, password, role, department, shift, isFieldWorker, salary, shiftStart, shiftEnd, salaryType, brand, branch } = req.body;
 
   const userExists = await User.findOne({ employeeId });
   if (userExists) {
@@ -24,7 +24,8 @@ const createEmployee = async (req, res) => {
     salaryType: salaryType || 'Monthly',
     shiftStart: shiftStart || '09:00',
     shiftEnd: shiftEnd || '18:00',
-    brand: brand || 'None'
+    brand: brand || 'None',
+    branch: branch || 'Main'
   });
 
   if (user) {
@@ -38,6 +39,7 @@ const createEmployee = async (req, res) => {
       shiftStart: user.shiftStart,
       shiftEnd: user.shiftEnd,
       brand: user.brand,
+      branch: user.branch,
     });
   } else {
     res.status(400).json({ message: 'Invalid employee data' });

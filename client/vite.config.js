@@ -4,6 +4,20 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://soft.adyahome.com',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'https://soft.adyahome.com',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

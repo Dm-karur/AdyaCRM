@@ -3,7 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, Calendar, LogOut, ClipboardCheck, 
-  Briefcase, Activity, Target, FileText, CheckSquare, Clock, UserCircle, Menu, X
+  Briefcase, Activity, Target, FileText, CheckSquare, Clock, UserCircle, Menu, X, Building2
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -24,6 +24,7 @@ const AdminLayout = () => {
     { name: 'Clients', path: '/admin/clients', icon: <Briefcase size={18} /> },
     { name: 'Reports', path: '/admin/reports', icon: <FileText size={18} /> },
     { name: 'Employees', path: '/admin/employees', icon: <UserCircle size={18} /> },
+    { name: 'Branches', path: '/admin/branches', icon: <Building2 size={18} /> },
     { name: 'Attendance', path: '/admin/attendance', icon: <ClipboardCheck size={18} /> },
   ];
 
@@ -31,7 +32,7 @@ const AdminLayout = () => {
   if (user?.role !== 'Admin') {
     if (user?.salaryType === 'Monthly') {
       navItems = allNavItems
-        .filter(item => !['Reports', 'Employees'].includes(item.name))
+        .filter(item => !['Reports', 'Employees', 'Branches'].includes(item.name))
         .map(item => item.name === 'Attendance' ? { ...item, path: '/history' } : item);
     } else if (user?.salaryType === 'Weekly') {
       navItems = allNavItems.filter(item => ['Dashboard', 'Attendance'].includes(item.name));
@@ -48,8 +49,7 @@ const AdminLayout = () => {
             <Menu size={24} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold">A</div>
-            <h1 className="text-xl font-bold tracking-tight">{user?.role === 'Admin' ? 'AdminPanel' : 'CRM Dashboard'}</h1>
+            <h1 className="text-sm md:text-base py-2 px-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-black shadow-lg shadow-primary/25 uppercase tracking-wide">{user?.role === 'Admin' ? 'AdminPanel' : 'CRM Dashboard'}</h1>
           </div>
         </div>
         <button onClick={handleLogout} className="text-gray-500 hover:text-primary transition-colors p-2">
@@ -67,9 +67,8 @@ const AdminLayout = () => {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-50 shrink-0 transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold text-lg">A</div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 uppercase">{user?.role === 'Admin' ? 'AdminPanel' : 'CRM Dashboard'}</h1>
+        <div className="p-6 pb-2 flex items-center gap-3">
+          <h1 className="w-full text-center text-lg py-3 px-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-black shadow-lg shadow-primary/25 uppercase tracking-widest">{user?.role === 'Admin' ? 'AdminPanel' : 'CRM Dashboard'}</h1>
         </div>
         
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide py-2">

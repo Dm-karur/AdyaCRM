@@ -13,6 +13,10 @@ const quoteSchema = new mongoose.Schema({
     mrp: { type: Number, required: true },
     discountedPrice: { type: Number, required: true }
   }],
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   // Legacy fields (optional)
   product: { type: String },
   model: { type: String },
