@@ -22,6 +22,14 @@ class AuthController {
      */
     public function login() {
         $data = json_decode(file_get_contents("php://input"));
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        
+        $rateLimiter = new \App\middleware\RateLimiter();
+        if (!$rateLimiter->checkRateLimit($ip)) {
+            http_response_code(429);
+            echo json_encode(["message" => "Too many failed login attempts. Please try again in 15 minutes."]);
+            return;
+        }
         
         if (empty($data->employeeId) || empty($data->password)) {
             http_response_code(400);
@@ -39,13 +47,24 @@ class AuthController {
 
         // CRITICAL FIX: Check isActive before allowing login (matches Node.js)
         if (!$userData['isActive']) {
+            $rateLimiter->recordFailedAttempt($ip);
             http_response_code(401);
             echo json_encode(["message" => "Invalid employee ID or password"]);
             return;
         }
 
         if ($this->user->matchPassword($data->password, $userData['password'])) {
+            $rateLimiter->clearAttempts($ip);
             $token = AuthMiddleware::generateToken($userData['id']);
+            
+            // Set Secure HttpOnly Cookie (Made more robust for varying server environments)
+            setcookie("auth_token", $token, [
+                'expires' => time() + (86400 * 30), // 30 days
+                'path' => '/',
+                'secure' => true,
+                'httponly' => true,
+                'samesite' => 'None' // Changed to None to prevent cross-origin issues if they use www or drop https
+            ]);
             
             http_response_code(200);
             echo json_encode([
@@ -56,9 +75,10 @@ class AuthController {
                 "salaryType" => $userData['salaryType'] ?? null,
                 "brand" => $userData['brand'] ?? null,
                 "branch" => $userData['branch'] ?? null,
-                "token" => $token
+                // "token" => $token // Removed from body for security
             ]);
         } else {
+            $rateLimiter->recordFailedAttempt($ip);
             http_response_code(401);
             echo json_encode(["message" => "Invalid employee ID or password"]);
         }
@@ -134,17 +154,43 @@ class AuthController {
         if ($this->user->create($insertData)) {
             $token = AuthMiddleware::generateToken($id);
             
+            // Set Secure HttpOnly Cookie
+            setcookie("auth_token", $token, [
+                'expires' => time() + (86400 * 30), // 30 days
+                'path' => '/',
+                'secure' => true,
+                'httponly' => true,
+                'samesite' => 'None'
+            ]);
+            
             http_response_code(201);
             echo json_encode([
                 "_id" => $id,
                 "name" => $insertData['name'],
                 "employeeId" => $insertData['employeeId'],
-                "role" => "Admin",
-                "token" => $token
+                "role" => "Admin"
             ]);
         } else {
             http_response_code(400);
             echo json_encode(["message" => "Invalid admin data"]);
         }
+    }
+
+    /**
+     * @desc    Logout user & clear cookie
+     * @route   POST /api/auth/logout
+     * @access  Public
+     */
+    public function logout() {
+        setcookie("auth_token", "", [
+            'expires' => time() - 3600, // Expire immediately
+            'path' => '/',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'None'
+        ]);
+        
+        http_response_code(200);
+        echo json_encode(["message" => "Logged out successfully"]);
     }
 }

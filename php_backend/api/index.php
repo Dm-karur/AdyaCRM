@@ -27,6 +27,9 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Apply global security headers
+\App\middleware\SecurityHeaders::apply();
+
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 // Assuming it's hosted such that the request goes to /php_backend/api/...
 // We need to extract the parts after /api/
@@ -46,6 +49,8 @@ if ($resource === 'auth') {
     $controller = new \App\controllers\AuthController();
     if ($method === 'POST' && $action === 'login') {
         $controller->login();
+    } elseif ($method === 'POST' && $action === 'logout') {
+        $controller->logout();
     } elseif ($method === 'POST' && $action === 'register-admin') {
         $controller->registerAdmin();
     } elseif ($method === 'GET' && $action === 'profile') {

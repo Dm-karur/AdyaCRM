@@ -8,12 +8,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loggedInUser = localStorage.getItem('userInfo');
-    if (loggedInUser) {
-      const parsedUser = JSON.parse(loggedInUser);
-      setUser(parsedUser);
+    const checkSession = async () => {
+      try {
+        const { data } = await api.get('/auth/profile');
+        setUser(data);
+        // Also save non-sensitive user info for fast re-render
+        localStorage.setItem('userInfo', JSON.stringify(data));
+      } catch (error) {
+        setUser(null);
+        localStorage.removeItem('userInfo');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Fast initial render from cache if available
+    const cachedUser = localStorage.getItem('userInfo');
+    if (cachedUser) {
+      setUser(JSON.parse(cachedUser));
     }
-    setLoading(false);
+    
+    checkSession();
   }, []);
 
   const login = async (employeeId, password) => {
@@ -23,7 +38,12 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error', error);
+    }
     setUser(null);
     localStorage.removeItem('userInfo');
   };

@@ -40,8 +40,18 @@ class AuthMiddleware {
             }
         }
         
-        if ($headers && preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
+        $token = null;
+
+        // Try getting token from cookie first (Secure HttpOnly session)
+        if (isset($_COOKIE['auth_token'])) {
+            $token = $_COOKIE['auth_token'];
+        } 
+        // Fallback to Authorization header
+        else if ($headers && preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
             $token = $matches[1];
+        }
+
+        if ($token) {
             try {
                 $decoded = self::decodeJWT($token);
                 if (!$decoded) {

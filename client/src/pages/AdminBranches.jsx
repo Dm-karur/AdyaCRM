@@ -52,9 +52,9 @@ const AdminBranches = () => {
       const loc = await getCurrentLocation();
       setNewLat(loc.latitude.toFixed(8));
       setNewLng(loc.longitude.toFixed(8));
-      setNewGoogleMapsLink(''); // Clear maps link since we're using GPS
       toast.success(`Location acquired! Accuracy: ${Math.round(loc.accuracy)}m`);
     } catch (err) {
+      console.error(err);
       toast.error('Failed to get location. Please allow GPS access.');
     } finally {
       setIsGettingLocation(false);

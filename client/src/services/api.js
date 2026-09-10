@@ -2,20 +2,24 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api', // Relative path for shared hosting (frontend and backend on same domain)
+  withCredentials: true, // Send secure HttpOnly cookies with every request
 });
 
-// Request interceptor to add the auth token header to requests
-api.interceptors.request.use(
-  (config) => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      const parsedInfo = JSON.parse(userInfo);
-      config.headers.Authorization = `Bearer ${parsedInfo.token}`;
+// Response interceptor to catch 401 Unauthorized errors (invalid/missing cookies)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // If the backend says not authorized, it means the session is dead or cookie is missing
+    if (error.response && error.response.status === 401) {
+      console.error("Session expired or missing token. Forcing logout.");
+      localStorage.removeItem('userInfo');
+      // Only redirect if we are not already on the login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
-    
-    return config;
-  },
-  (error) => Promise.reject(error)
+    return Promise.reject(error);
+  }
 );
 
 export default api;

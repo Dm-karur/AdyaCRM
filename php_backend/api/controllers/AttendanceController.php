@@ -160,8 +160,10 @@ class AttendanceController {
         $validation['debug']['branch_radius'] = $branch['attendance_radius'] ?? 100;
 
         if (empty($branch['latitude']) || empty($branch['longitude'])) {
-            // Branch location not configured, skip validation to be backward compatible
+            // Strict geofencing: Branch must be configured
             $validation['status'] = 'BRANCH_NOT_CONFIGURED';
+            $validation['isAllowed'] = false;
+            $validation['error'] = "The GPS location for your branch ({$branchName}) is not configured. Please contact the Admin to set the branch location.";
             return $validation;
         }
 

@@ -112,11 +112,31 @@ const Attendance = () => {
     }
 
     try {
+      setProcessingStep('Acquiring fresh GPS location...');
+      
+      let freshLocation = location;
+      if (!user?.isFieldWorker) {
+        freshLocation = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                mapUrl: `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`
+              });
+            },
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          );
+        });
+      }
+
       // Step 1: Reverse geocode the address
       let address = 'Address Not Available';
-      if (location?.latitude && location?.longitude) {
+      if (freshLocation?.latitude && freshLocation?.longitude) {
         setProcessingStep('Fetching address...');
-        address = await reverseGeocodeClient(location.latitude, location.longitude);
+        address = await reverseGeocodeClient(freshLocation.latitude, freshLocation.longitude);
       }
 
       // Step 2: Stamp the image
@@ -127,9 +147,9 @@ const Attendance = () => {
           employeeName: user?.name || 'Employee',
           employeeId: user?.employeeId || 'N/A',
           department: user?.department || 'General',
-          latitude: location?.latitude || 0,
-          longitude: location?.longitude || 0,
-          accuracy: location?.accuracy || 0,
+          latitude: freshLocation?.latitude || 0,
+          longitude: freshLocation?.longitude || 0,
+          accuracy: freshLocation?.accuracy || 0,
           address: address,
           punchType: type === 'in' ? 'Check In' : 'Check Out',
           timestamp: new Date(),
@@ -141,7 +161,7 @@ const Attendance = () => {
       const payload = {
         photo: finalPhoto, // stamped
         originalSelfie: photoDataUrl, // unstamped
-        location,
+        location: freshLocation,
         device: {
           browser: navigator.userAgent,
           os: navigator.platform,

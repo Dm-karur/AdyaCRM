@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Camera, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const CameraCapture = forwardRef(({ onCapture }, ref) => {
   const videoRef = useRef(null);
@@ -113,16 +113,6 @@ const CameraCapture = forwardRef(({ onCapture }, ref) => {
         className="absolute inset-0 w-full h-full object-cover"
       />
       <canvas ref={canvasRef} className="hidden" />
-      
-      <div className="relative z-10 p-4 bg-gradient-to-t from-black/70 to-transparent flex justify-center">
-        <button 
-          onClick={capturePhoto} 
-          disabled={isCapturing}
-          className="bg-white text-primary rounded-full p-4 hover:scale-105 transition-transform disabled:opacity-50"
-        >
-          <Camera size={28} />
-        </button>
-      </div>
     </div>
   );
 });
