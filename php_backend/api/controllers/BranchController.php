@@ -194,4 +194,33 @@ class BranchController {
             echo json_encode(["message" => "Database error: " . $e->getMessage()]);
         }
     }
+
+    /**
+     * @desc    Delete a branch
+     * @route   DELETE /api/branches/:id
+     * @access  Private/Admin
+     */
+    public function deleteBranch($id) {
+        // Enforce admin only
+        if (!isset($this->user['role']) || $this->user['role'] !== 'Admin') {
+            http_response_code(403);
+            echo json_encode(["message" => "Access denied, admin only"]);
+            return;
+        }
+
+        try {
+            $success = $this->branch->delete($id);
+            
+            if ($success) {
+                http_response_code(200);
+                echo json_encode(["message" => "Branch deleted successfully"]);
+            } else {
+                http_response_code(500);
+                echo json_encode(["message" => "Failed to delete branch"]);
+            }
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(["message" => "Database error: " . $e->getMessage()]);
+        }
+    }
 }

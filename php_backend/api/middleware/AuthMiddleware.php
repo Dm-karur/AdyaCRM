@@ -120,12 +120,10 @@ class AuthMiddleware {
             $user = self::protect();
         }
 
-        // CRITICAL FIX: Match Node.js admin middleware logic exactly
+        // Only actual Admins are authorized
         $isAdmin = isset($user['role']) && $user['role'] === 'Admin';
-        $isMonthlySalaryEmployee = isset($user['role']) && $user['role'] === 'Employee' 
-                                   && isset($user['salaryType']) && $user['salaryType'] === 'Monthly';
 
-        if ($isAdmin || $isMonthlySalaryEmployee) {
+        if ($isAdmin) {
             return $user;
         } else {
             http_response_code(403);

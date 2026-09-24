@@ -258,8 +258,9 @@ const AdminEmployees = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
                       <select className="input-field w-full" value={newEmployee.brand} onChange={e => setNewEmployee({ ...newEmployee, brand: e.target.value })}>
                         <option value="None">Select Brand</option>
-                        <option value="Bosch">Bosch</option>
                         <option value="Furniture">Furniture</option>
+                        <option value="Bosch">Bosch</option>
+                        <option value="ADA">ADA</option>
                       </select>
                     </div>
                   )}

@@ -12,6 +12,7 @@ const AdminBranches = () => {
   const [newLng, setNewLng] = useState('');
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [updatingBranchId, setUpdatingBranchId] = useState(null);
+  const [deletingBranchId, setDeletingBranchId] = useState(null);
 
   useEffect(() => {
     fetchBranches();
@@ -109,6 +110,23 @@ const AdminBranches = () => {
       toast.error(err.response?.data?.message || 'Failed to create branch');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteBranch = async (branchId, branchName) => {
+    if (!window.confirm(`Are you sure you want to delete branch "${branchName}"? This will move all associated users and leads to the 'Main' branch.`)) {
+      return;
+    }
+    
+    setDeletingBranchId(branchId);
+    try {
+      await api.delete(`/branches/${branchId}`);
+      toast.success(`Branch "${branchName}" deleted successfully`);
+      fetchBranches();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete branch');
+    } finally {
+      setDeletingBranchId(null);
     }
   };
 
@@ -251,17 +269,30 @@ const AdminBranches = () => {
                           </div>
                         </td>
                         <td className="px-6 py-5 text-center">
-                          <button
-                            onClick={() => handleUpdateBranchLocation(branch)}
-                            disabled={updatingBranchId === (branch._id || branch.id)}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-lg shadow-md shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 font-bold text-xs disabled:opacity-50 disabled:hover:translate-y-0"
-                          >
-                            {updatingBranchId === (branch._id || branch.id) ? (
-                              <><Loader2 size={14} className="animate-spin" /> Updating...</>
-                            ) : (
-                              <><Navigation size={14} /> Set My Location</>
-                            )}
-                          </button>
+                          <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <button
+                              onClick={() => handleUpdateBranchLocation(branch)}
+                              disabled={updatingBranchId === (branch._id || branch.id)}
+                              className="w-full sm:w-auto flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-lg shadow-md shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 font-bold text-xs disabled:opacity-50 disabled:hover:translate-y-0"
+                            >
+                              {updatingBranchId === (branch._id || branch.id) ? (
+                                <><Loader2 size={14} className="animate-spin" /> Updating...</>
+                              ) : (
+                                <><Navigation size={14} /> Set My Location</>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBranch(branch._id || branch.id, branch.name)}
+                              disabled={deletingBranchId === (branch._id || branch.id)}
+                              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-all duration-300 font-bold text-xs disabled:opacity-50"
+                            >
+                              {deletingBranchId === (branch._id || branch.id) ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                'Delete'
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -304,17 +335,30 @@ const AdminBranches = () => {
                       )}
                     </div>
 
-                    <button
-                      onClick={() => handleUpdateBranchLocation(branch)}
-                      disabled={updatingBranchId === (branch._id || branch.id)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl font-bold shadow-lg shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 text-sm disabled:opacity-50 disabled:hover:translate-y-0"
-                    >
-                      {updatingBranchId === (branch._id || branch.id) ? (
-                        <><Loader2 size={14} className="animate-spin" /> Updating...</>
-                      ) : (
-                        <><Navigation size={14} /> Set My Location</>
-                      )}
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                      <button
+                        onClick={() => handleUpdateBranchLocation(branch)}
+                        disabled={updatingBranchId === (branch._id || branch.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl font-bold shadow-lg shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 text-sm disabled:opacity-50 disabled:hover:translate-y-0"
+                      >
+                        {updatingBranchId === (branch._id || branch.id) ? (
+                          <><Loader2 size={14} className="animate-spin" /> Updating...</>
+                        ) : (
+                          <><Navigation size={14} /> Set Location</>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBranch(branch._id || branch.id, branch.name)}
+                        disabled={deletingBranchId === (branch._id || branch.id)}
+                        className="flex items-center justify-center gap-2 py-2 px-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all duration-300 text-sm disabled:opacity-50"
+                      >
+                        {deletingBranchId === (branch._id || branch.id) ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          'Delete'
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (

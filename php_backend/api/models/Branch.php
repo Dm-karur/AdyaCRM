@@ -90,4 +90,36 @@ class Branch {
         
         return 'BR-1001';
     }
+
+    public function delete($id) {
+        // First get the branch name so we can update users and customer_entries
+        $query = "SELECT name FROM " . $this->table_name . " WHERE id = :id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':id', $id);
+        $stmt->execute();
+        $branch = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if ($branch) {
+            $branchName = $branch['name'];
+
+            // Update users to 'Main' branch
+            $updateUsers = "UPDATE users SET branch = 'Main' WHERE branch = :branchName";
+            $uStmt = $this->conn->prepare($updateUsers);
+            $uStmt->bindValue(':branchName', $branchName);
+            $uStmt->execute();
+
+            // Update customer_entries to 'Main' branch
+            $updateEntries = "UPDATE customer_entries SET branch = 'Main' WHERE branch = :branchName";
+            $eStmt = $this->conn->prepare($updateEntries);
+            $eStmt->bindValue(':branchName', $branchName);
+            $eStmt->execute();
+        }
+
+        // Now delete the branch
+        $query = "DELETE FROM " . $this->table_name . " WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':id', $id);
+        
+        return $stmt->execute();
+    }
 }

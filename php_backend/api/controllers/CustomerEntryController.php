@@ -100,6 +100,7 @@ class CustomerEntryController {
             'phone' => $phone,
             'status' => $data['status'] ?? 'NEW LEAD',
             'source' => $data['source'] ?? 'WEBSITE',
+            'referrerName' => $data['referrerName'] ?? '-',
             'serviceInterest' => $data['serviceInterest'] ?? '-',
             'budget' => $data['budget'] ?? '-',
             'priority' => $data['priority'] ?? 'WARM',
@@ -298,3 +299,4 @@ class CustomerEntryController {
         }
     }
 }
+

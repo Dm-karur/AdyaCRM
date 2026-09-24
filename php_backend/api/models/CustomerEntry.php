@@ -11,8 +11,8 @@ class CustomerEntry {
 
     public function create($data) {
         $query = "INSERT INTO " . $this->table_name . " 
-                  (id, employeeId, name, company, email, phone, status, source, serviceInterest, budget, priority, photo, brand, branch) 
-                  VALUES (:id, :employeeId, :name, :company, :email, :phone, :status, :source, :serviceInterest, :budget, :priority, :photo, :brand, :branch)";
+                  (id, employeeId, name, company, email, phone, status, source, referrerName, serviceInterest, budget, priority, photo, brand, branch) 
+                  VALUES (:id, :employeeId, :name, :company, :email, :phone, :status, :source, :referrerName, :serviceInterest, :budget, :priority, :photo, :brand, :branch)";
 
         $stmt = $this->conn->prepare($query);
 
@@ -24,6 +24,7 @@ class CustomerEntry {
         $stmt->bindParam(":phone", $data['phone']);
         $stmt->bindParam(":status", $data['status']);
         $stmt->bindParam(":source", $data['source']);
+        $stmt->bindParam(":referrerName", $data['referrerName']);
         $stmt->bindParam(":serviceInterest", $data['serviceInterest']);
         $stmt->bindParam(":budget", $data['budget']);
         $stmt->bindParam(":priority", $data['priority']);
@@ -187,3 +188,4 @@ class CustomerEntry {
         }
     }
 }
+

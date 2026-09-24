@@ -32,7 +32,7 @@ class User {
     }
 
     public function findById($id) {
-        $query = "SELECT id as _id, id, name, employeeId, role, department, designation, joiningDate, shift, photo, isActive, isFieldWorker, allow_outside_radius, salary, salaryType, shiftStart, shiftEnd, brand, branch, password, plainPassword FROM " . $this->table_name . " WHERE id = :id LIMIT 0,1";
+        $query = "SELECT id as _id, id, name, employeeId, role, department, designation, joiningDate, shift, photo, isActive, isFieldWorker, allow_outside_radius, salary, salaryType, shiftStart, shiftEnd, brand, branch, password FROM " . $this->table_name . " WHERE id = :id LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
         $stmt->execute();
@@ -54,7 +54,7 @@ class User {
     public function create($data) {
         $query = "INSERT INTO " . $this->table_name . " 
                   SET id=:id, name=:name, employeeId=:employeeId, password=:password, 
-                      plainPassword=:plainPassword, role=:role, department=:department,
+                      role=:role, department=:department,
                       shift=:shift, isFieldWorker=:isFieldWorker, allow_outside_radius=:allow_outside_radius, salary=:salary, 
                       salaryType=:salaryType, shiftStart=:shiftStart, shiftEnd=:shiftEnd, brand=:brand, branch=:branch";
                       
@@ -66,8 +66,7 @@ class User {
         $stmt->bindValue(':name', $data['name']);
         $stmt->bindValue(':employeeId', $data['employeeId']);
         $stmt->bindValue(':password', $hashed_password);
-        $stmt->bindValue(':plainPassword', $data['password']);
-        $stmt->bindValue(':role', isset($data['role']) ? $data['role'] : 'Employee');
+$stmt->bindValue(':role', isset($data['role']) ? $data['role'] : 'Employee');
         $stmt->bindValue(':department', isset($data['department']) ? $data['department'] : 'General');
         $stmt->bindValue(':shift', isset($data['shift']) ? $data['shift'] : 'General');
         $stmt->bindValue(':isFieldWorker', isset($data['isFieldWorker']) && $data['isFieldWorker'] ? 1 : 0);
@@ -159,10 +158,8 @@ class User {
 
         if (isset($data['password']) && !empty($data['password'])) {
             $fields[] = "password = :password";
-            $fields[] = "plainPassword = :plainPassword";
-            $params[":password"] = password_hash($data['password'], PASSWORD_BCRYPT);
-            $params[":plainPassword"] = $data['password'];
-        }
+$params[":password"] = password_hash($data['password'], PASSWORD_BCRYPT);
+}
 
         if (empty($fields)) return true; // Nothing to update
 

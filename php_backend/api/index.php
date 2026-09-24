@@ -168,6 +168,8 @@ if ($resource === 'auth') {
         $controller->createBranch();
     } elseif ($method === 'PUT' && !empty($actionOrId)) {
         $controller->updateBranch($actionOrId);
+    } elseif ($method === 'DELETE' && !empty($actionOrId)) {
+        $controller->deleteBranch($actionOrId);
     } else {
         http_response_code(404);
         echo json_encode(["message" => "Endpoint not found for branches"]);

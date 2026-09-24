@@ -41,12 +41,93 @@ class AttendanceController {
             }
             
             $filePath = $uploadsDir . '/' . $fileName;
-            file_put_contents($filePath, $imageBuffer);
+
+            // --- IMAGE COMPRESSION (added to reduce storage) ---
+            $compressed = $this->compressImage($imageBuffer);
+            if ($compressed !== false) {
+                file_put_contents($filePath, $compressed);
+            } else {
+                // Fallback: save original if compression fails
+                file_put_contents($filePath, $imageBuffer);
+            }
             
             return '/uploads/' . $fileName;
         } catch (\Exception $error) {
             error_log('Error saving image: ' . $error->getMessage());
             return $base64String;
+        }
+    }
+
+    /**
+     * Compress an image buffer to reduce file size for long-term storage.
+     * Max dimension: 1280px, JPEG quality: 75, auto-orient via EXIF.
+     * Returns compressed JPEG binary on success, false on failure.
+     */
+    private function compressImage($imageBuffer) {
+        try {
+            if (!function_exists('imagecreatefromstring')) {
+                error_log('GD library not available, skipping compression');
+                return false;
+            }
+
+            $srcImage = @imagecreatefromstring($imageBuffer);
+            if (!$srcImage) {
+                error_log('Failed to create image from buffer, skipping compression');
+                return false;
+            }
+
+            // Fix orientation from EXIF data (camera photos are often rotated)
+            if (function_exists('exif_read_data')) {
+                $tmpFile = tempnam(sys_get_temp_dir(), 'exif');
+                file_put_contents($tmpFile, $imageBuffer);
+                $exif = @exif_read_data($tmpFile);
+                @unlink($tmpFile);
+
+                if ($exif && isset($exif['Orientation'])) {
+                    switch ($exif['Orientation']) {
+                        case 3:
+                            $srcImage = imagerotate($srcImage, 180, 0);
+                            break;
+                        case 6:
+                            $srcImage = imagerotate($srcImage, -90, 0);
+                            break;
+                        case 8:
+                            $srcImage = imagerotate($srcImage, 90, 0);
+                            break;
+                    }
+                }
+            }
+
+            $origWidth = imagesx($srcImage);
+            $origHeight = imagesy($srcImage);
+            $maxDim = 1280;
+
+            // Only resize if larger than max dimension
+            if ($origWidth > $maxDim || $origHeight > $maxDim) {
+                if ($origWidth >= $origHeight) {
+                    $newWidth = $maxDim;
+                    $newHeight = (int)round($origHeight * ($maxDim / $origWidth));
+                } else {
+                    $newHeight = $maxDim;
+                    $newWidth = (int)round($origWidth * ($maxDim / $origHeight));
+                }
+
+                $dstImage = imagecreatetruecolor($newWidth, $newHeight);
+                imagecopyresampled($dstImage, $srcImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+                imagedestroy($srcImage);
+                $srcImage = $dstImage;
+            }
+
+            // Output compressed JPEG to buffer
+            ob_start();
+            imagejpeg($srcImage, null, 75);
+            $compressedBuffer = ob_get_clean();
+            imagedestroy($srcImage);
+
+            return $compressedBuffer;
+        } catch (\Exception $e) {
+            error_log('Image compression failed: ' . $e->getMessage());
+            return false;
         }
     }
 
